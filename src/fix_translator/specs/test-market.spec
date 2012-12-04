@@ -86,11 +86,11 @@
         "none" : 0
       }
     },
-    "heart-beat-int" : {
+    "heartbeat-interval" : {
       "tag" : "108",
       "transform-by" : "to-int"
     },
-    "reset-seq-num-flag" : {
+    "reset-seq-num" : {
       "tag" :  "141",
       "transform-by" : "by-value",
       "values" : {
