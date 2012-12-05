@@ -6,7 +6,9 @@
 (def codecs (atom {}))
 
 (def ^:const tag-delimiter "\u0001")
+(def ^:const msg-type-tag "35")
 (def ^:const tag-number first)
+(def ^:const tag-name first)
 (def ^:const translation-fn second)
 
 (defn invert-map [m]
@@ -39,7 +41,7 @@
         (if-let [spec (c/parse-string (slurp spec-file) true)]
           (do
             (swap! codecs assoc venue {:encoder {} :decoder {}
-                                       :tags-of-interest ""})
+                                       :tags-of-interest {}})
             (doall (for [[k v] (:spec spec)]
               (let [t (gen-codec k v)]
                 (swap! codecs update-in [venue :encoder] conj (:encoder t))
@@ -51,6 +53,15 @@
         (println "Error: " (.getMessage e)))))
       true))
 
+(defn get-encoder [venue]
+  (get-in @codecs [venue :encoder]))
+
+(defn get-decoder [venue]
+  (get-in @codecs [venue :decoder]))
+
+(defn get-tags-of-interest [venue msg-type]
+  (get-in @codecs [venue :tags-of-interest msg-type]))
+
 (defn checksum
   ; Returns a 3-character string (left-padded with zeroes) representing the
   ; checksum of msg calculated according to the FIX protocol.
@@ -61,6 +72,7 @@
   (s/join "" 
     (doall
       (for [[t v] tags-values]
+        ; Need to add error handling to check whether a particular tag exists.
         (let [translator (t encoder)]
           (str (tag-number translator) "="
                 ((translation-fn translator) v) tag-delimiter))))))
@@ -81,12 +93,31 @@
     (->> translated-msg
          (add-msg-cap encoder)
          (add-checksum encoder))))
-        
 
+(defn extract-tag-value 
+  ; Extracts the value of a tag from a message.
+  [tag msg]
+  (let [pattern (re-pattern (str "(?<=" tag "=)(.*?)(?=" tag-delimiter ")"))]
+    (peek (re-find pattern msg))))
 
+(defn get-msg-type [venue msg]
+  (let [decoder (get-decoder venue)
+        msg-type (extract-tag-value msg-type-tag msg)]
+    ((translation-fn (decoder msg-type-tag)) msg-type)))
 
+(defn translate-to-map [decoder tag-value]
+  (let [translator (decoder (first tag-value))]
+    {(tag-name translator) ((translation-fn translator) (second tag-value))}))
 
-
+(defn decode-msg [venue msg-type msg]
+  (let [decoder (get-decoder venue)
+        tags (get-tags-of-interest venue msg-type) 
+        pattern (re-pattern (str "(?<=" tag-delimiter ")(" tags ")=(.*?)"
+                                 tag-delimiter))]
+    (->> (re-seq pattern msg)
+         (map #(drop 1 %))
+         (map (partial translate-to-map decoder))
+         (into {}))))
 
 
 
