@@ -98,7 +98,7 @@
         "no" : "N"
       }
     },
-    "test-req-id" : {
+    "test-request-id" : {
       "tag" : "112",
       "transform-by" : "to-string"
     },
