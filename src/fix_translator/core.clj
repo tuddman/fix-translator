@@ -71,7 +71,7 @@
 (defn translate-to-fix [encoder tags-values]
   (s/join "" 
     (doall
-      (for [[t v] tags-values]
+      (for [[t v] (partition 2 tags-values)]
         ; Need to add error handling to check whether a particular tag exists.
         (let [translator (t encoder)]
           (str (tag-number translator) "="
@@ -79,12 +79,12 @@
 
 (defn add-msg-cap [encoder msg]
   (let [msg-length (count msg)
-        msg-cap (translate-to-fix encoder {:begin-string :version
-                                           :body-length msg-length})]
+        msg-cap (translate-to-fix encoder [:begin-string :version
+                                           :body-length msg-length])]
     (str msg-cap msg)))
 
 (defn add-checksum [encoder msg]
-  (let [chksum (translate-to-fix encoder {:checksum (checksum msg)})]
+  (let [chksum (translate-to-fix encoder [:checksum (checksum msg)])]
     (str msg chksum)))
 
 (defn encode-msg [venue tags-values]
@@ -118,6 +118,3 @@
          (map #(drop 1 %))
          (map (partial translate-to-map decoder))
          (into {}))))
-
-
-
