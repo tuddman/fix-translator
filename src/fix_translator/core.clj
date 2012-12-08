@@ -17,14 +17,15 @@
         new-vals (keys m)]
     (zipmap new-keys new-vals)))
 
+; Add error-checking for failing to find :values in a "by-value" :transform-by.
 (defn gen-transformations [tag-spec]
   (let [instruction (:transform-by tag-spec)]
     (case instruction
       "by-value"  {:outbound #((:values tag-spec) %)
                    :inbound  #((invert-map (:values tag-spec)) %)}
-      "to-int"    {:outbound #(str %)
+      "to-int"    {:outbound #(str (int %))
                    :inbound  #(Integer/parseInt %)}
-      "to-double" {:outbound #(str %)
+      "to-double" {:outbound #(str (double %))
                    :inbound  #(Double/parseDouble %)}
       "to-string" {:outbound #(identity %)
                    :inbound  #(identity %)})))
@@ -50,7 +51,7 @@
                                    (:tags-of-interest spec))
             true))
       (catch Exception e
-        (println "Error: " (.getMessage e)))))
+        (println "Error:" (.getMessage e)))))
       true))
 
 (defn get-encoder [venue]
@@ -68,14 +69,17 @@
   [msg]
   (format "%03d" (mod (reduce + (.getBytes msg)) 256)))
 
+; Must handle cases where the tag is not found (leading to a nil translator)
+; and the case where the value is not found (leading to a nil transform)
+; must switch this to look more like decode and translate-to-map.
 (defn translate-to-fix [encoder tags-values]
   (s/join "" 
     (doall
       (for [[t v] (partition 2 tags-values)]
-        ; Need to add error handling to check whether a particular tag exists.
         (let [translator (t encoder)]
-          (str (tag-number translator) "="
-                ((translation-fn translator) v) tag-delimiter))))))
+          (if-let [value ((translation-fn translator) v)]
+            (str (tag-number translator) "=" v tag-delimiter)
+            ()))))))
 
 (defn add-msg-cap [encoder msg]
   (let [msg-length (count msg)
@@ -89,7 +93,7 @@
 
 (defn encode-msg [venue tags-values]
   (let [encoder (get-in @codecs [venue :encoder])
-        translated-msg (s/join "" (translate-to-fix encoder tags-values))]
+        translated-msg (translate-to-fix encoder tags-values)]
     (->> translated-msg
          (add-msg-cap encoder)
          (add-checksum encoder))))

@@ -476,7 +476,7 @@
     "resend-request" : "7|16",
     "reject" : "45|58|371|372|373",
     "seq-reset" : "36|123",
-    "logout" : "58",
+    "logout" : "49|58",
     "indication-of-interest" : "52|23|28|55|26|9505",
     "execution-report" : "6|11|14|20|31|32|37|38|39|41|44|54|55|60|103|150|151|6793|9730",
     "order-cancel-reject" : "11|37|39|41|58|102|434"
