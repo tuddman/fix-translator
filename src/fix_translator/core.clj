@@ -17,18 +17,27 @@
         new-vals (keys m)]
     (zipmap new-keys new-vals)))
 
-; Add error-checking for failing to find :values in a "by-value" :transform-by.
 (defn gen-transformations [tag-spec]
-  (let [instruction (:transform-by tag-spec)]
+  (if-let [instruction (:transform-by tag-spec)]
     (case instruction
-      "by-value"  {:outbound #((:values tag-spec) %)
-                   :inbound  #((invert-map (:values tag-spec)) %)}
+      "by-value" (if-let [values (:values tag-spec)]
+                  {:outbound #(values %)
+                   :inbound  #((invert-map values) %)}
+                  (throw (Exception.
+                    (str "For tag " (:tag tag-spec) " in spec, no values found
+                      for transform-by-value function"))))
       "to-int"    {:outbound #(str (int %))
                    :inbound  #(Integer/parseInt %)}
       "to-double" {:outbound #(str (double %))
                    :inbound  #(Double/parseDouble %)}
       "to-string" {:outbound #(identity %)
-                   :inbound  #(identity %)})))
+                   :inbound  #(identity %)}
+      (throw (Exception.
+                    (str "For tag " (:tag tag-spec) " in spec, invalid
+                          transform-by function: " instruction))))
+    (throw (Exception.
+                    (str "For tag " (:tag tag-spec) " in spec, no transform-by
+                          function found")))))
 
 (defn gen-codec [tag-name tag-spec]
   (let [transformer (gen-transformations tag-spec)]
@@ -51,7 +60,9 @@
                                    (:tags-of-interest spec))
             true))
       (catch Exception e
-        (println "Error:" (.getMessage e)))))
+        (println "Error:" (.getMessage e))
+        (swap! codecs dissoc venue)
+        nil)))
       true))
 
 (defn get-encoder [venue]
@@ -60,24 +71,6 @@
     (throw (Exception. (str "No encoder found for " venue ". Have you loaded
       it with load-spec?")))))
 
-(defn get-decoder [venue]
-  (if-let [decoder (get-in @codecs [venue :decoder])]
-    decoder
-    (throw (Exception. (str "No decoder found for " venue ". Have you loaded
-      it with load-spec?")))))
-
-(defn get-tags-of-interest [venue msg-type]
-  (get-in @codecs [venue :tags-of-interest msg-type]))
-
-(defn checksum
-  ; Returns a 3-character string (left-padded with zeroes) representing the
-  ; checksum of msg calculated according to the FIX protocol.
-  [msg]
-  (format "%03d" (mod (reduce + (.getBytes msg)) 256)))
-
-; Must handle cases where the tag is not found (leading to a nil translator)
-; and the case where the value is not found (leading to a nil transform)
-; must switch this to look more like decode and translate-to-map.
 (defn translate-to-fix [encoder tag-value]
   (if-let [translator (encoder (first tag-value))]
     (if-let [value ((translation-fn translator) (second tag-value))]
@@ -93,6 +86,12 @@
                       [:body-length msg-length]]))]
     (str msg-cap msg)))
 
+(defn checksum
+  ; Returns a 3-character string (left-padded with zeroes) representing the
+  ; checksum of msg calculated according to the FIX protocol.
+  [msg]
+  (format "%03d" (mod (reduce + (.getBytes msg)) 256)))
+
 (defn add-checksum [encoder msg]
   (let [chksum (translate-to-fix encoder [:checksum (checksum msg)])]
     (str msg chksum)))
@@ -105,6 +104,18 @@
          (add-msg-cap encoder)
          (add-checksum encoder))))
 
+(defn get-decoder [venue]
+  (if-let [decoder (get-in @codecs [venue :decoder])]
+    decoder
+    (throw (Exception. (str "No decoder found for " venue ". Have you loaded
+      it with load-spec?")))))
+
+(defn get-tags-of-interest [venue msg-type]
+  (if-let [tags (get-in @codecs [venue :tags-of-interest msg-type])]
+    tags
+    (throw (Exception. (str "No venue or tags of interest found for this tag: "
+                            msg-type)))))
+
 (defn extract-tag-value 
   ; Extracts the value of a tag from a message.
   [tag msg]
@@ -114,11 +125,18 @@
 (defn get-msg-type [venue msg]
   (let [decoder (get-decoder venue)
         msg-type (extract-tag-value msg-type-tag msg)]
-    ((translation-fn (decoder msg-type-tag)) msg-type)))
+    (if-let [msg-type ((translation-fn (decoder msg-type-tag)) msg-type)]
+      msg-type
+      :unknown-msg-type)))
 
 (defn translate-to-map [decoder tag-value]
-  (let [translator (decoder (first tag-value))]
-    {(tag-name translator) ((translation-fn translator) (second tag-value))}))
+  (if-let [translator (decoder (first tag-value))]
+    (if-let [value ((translation-fn translator) (second tag-value))]
+      {(tag-name translator) value}
+    (throw (Exception. (str "No translation found for tag " (first tag-value)
+                            " with value " (second tag-value)))))
+  (throw (Exception. (str "No decoder found for tag " (first tag-value)
+                          " in spec")))))
 
 (defn decode-msg [venue msg-type msg]
   (let [decoder (get-decoder venue)

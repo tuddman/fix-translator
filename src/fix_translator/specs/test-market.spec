@@ -344,7 +344,7 @@
     "last-market" : {
       "tag" : "30",
       "transform-by" : "by-value",
-      "by-value" : {
+      "values" : {
         "lit" : "79",
         "qlx" : "XQLX"
       }
