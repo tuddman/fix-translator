@@ -55,10 +55,16 @@
       true))
 
 (defn get-encoder [venue]
-  (get-in @codecs [venue :encoder]))
+  (if-let [encoder (get-in @codecs [venue :encoder])]
+    encoder
+    (throw (Exception. (str "No encoder found for " venue ". Have you loaded
+      it with load-spec?")))))
 
 (defn get-decoder [venue]
-  (get-in @codecs [venue :decoder]))
+  (if-let [decoder (get-in @codecs [venue :decoder])]
+    decoder
+    (throw (Exception. (str "No decoder found for " venue ". Have you loaded
+      it with load-spec?")))))
 
 (defn get-tags-of-interest [venue msg-type]
   (get-in @codecs [venue :tags-of-interest msg-type]))
@@ -72,19 +78,19 @@
 ; Must handle cases where the tag is not found (leading to a nil translator)
 ; and the case where the value is not found (leading to a nil transform)
 ; must switch this to look more like decode and translate-to-map.
-(defn translate-to-fix [encoder tags-values]
-  (s/join "" 
-    (doall
-      (for [[t v] (partition 2 tags-values)]
-        (let [translator (t encoder)]
-          (if-let [value ((translation-fn translator) v)]
-            (str (tag-number translator) "=" v tag-delimiter)
-            ()))))))
+(defn translate-to-fix [encoder tag-value]
+  (if-let [translator (encoder (first tag-value))]
+    (if-let [value ((translation-fn translator) (second tag-value))]
+      (str (tag-number translator) "=" value tag-delimiter)
+      (throw (Exception. (str "No transformation found for "
+                         (second tag-value)))))
+    (throw (Exception. (str "tag " (first tag-value) " not found")))))
 
 (defn add-msg-cap [encoder msg]
   (let [msg-length (count msg)
-        msg-cap (translate-to-fix encoder [:begin-string :version
-                                           :body-length msg-length])]
+        msg-cap (s/join "" (map (partial translate-to-fix encoder)
+                     [[:begin-string :version]
+                      [:body-length msg-length]]))]
     (str msg-cap msg)))
 
 (defn add-checksum [encoder msg]
@@ -92,9 +98,10 @@
     (str msg chksum)))
 
 (defn encode-msg [venue tags-values]
-  (let [encoder (get-in @codecs [venue :encoder])
-        translated-msg (translate-to-fix encoder tags-values)]
-    (->> translated-msg
+  (let [encoder (get-encoder venue)]
+    (->> (partition 2 tags-values)
+         (map (partial translate-to-fix encoder))
+         (s/join "")
          (add-msg-cap encoder)
          (add-checksum encoder))))
 
