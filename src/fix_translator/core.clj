@@ -46,7 +46,7 @@
 
 (defn load-spec [venue]
   (if (nil? (venue @codecs))
-    (let [spec-file (str "src/fix_translator/specs/" (name venue) ".spec")]
+    (let [spec-file (str "specs/" (name venue) ".spec")]
       (try
         (if-let [spec (c/parse-string (slurp spec-file) true)]
           (do
