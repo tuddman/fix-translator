@@ -67,7 +67,7 @@
                 (let [t (gen-codec k v venue)]
                   (swap! codecs update-in [venue :encoder] conj (:encoder t))
                   (swap! codecs update-in [venue :decoder] conj (:decoder t)))))
-              (swap! codecs assoc-in [venue (key-format :tags-of-interest)]
+              (swap! codecs assoc-in [venue :tags-of-interest]
                                      (spec (key-format :tags-of-interest)))
               true))
         (catch Exception e
