@@ -17,53 +17,64 @@
         new-vals (keys m)]
     (zipmap new-keys new-vals)))
 
-(defn gen-transformations [tag-spec]
-  (if-let [instruction (:transform-by tag-spec)]
-    (case instruction
-      "by-value" (if-let [values (:values tag-spec)]
-                  {:outbound #(values %)
-                   :inbound  #((invert-map values) %)}
-                  (throw (Exception.
-                    (str "For tag " (:tag tag-spec) " in spec, no values found
-                      for transform-by-value function"))))
-      "to-int"    {:outbound #(str (int %))
-                   :inbound  #(Integer/parseInt %)}
-      "to-double" {:outbound #(str (double %))
-                   :inbound  #(Double/parseDouble %)}
-      "to-string" {:outbound #(identity %)
-                   :inbound  #(identity %)}
+(defn gen-transformations [tag-spec venue]
+  (let [key-format (get-in @codecs [venue :key-format])
+        tag (key-format :tag)
+        transform-by (key-format :transform-by)
+        values (key-format :values)]
+    (if-let [instruction (tag-spec transform-by)]
+      (case instruction
+        "by-value" (if-let [values (tag-spec values)]
+                    {:outbound #(values %)
+                     :inbound  #((invert-map values) %)}
+                    (throw (Exception.
+                      (str "For tag " (tag-spec tag) " in spec, no values found
+                        for transform-by-value function"))))
+        "to-int"    {:outbound #(str (int %))
+                     :inbound  #(Integer/parseInt %)}
+        "to-double" {:outbound #(str (double %))
+                     :inbound  #(Double/parseDouble %)}
+        "to-string" {:outbound #(identity %)
+                     :inbound  #(identity %)}
+        (throw (Exception.
+                      (str "For tag " (tag-spec tag) " in spec, invalid
+                            transform-by function: " instruction))))
       (throw (Exception.
-                    (str "For tag " (:tag tag-spec) " in spec, invalid
-                          transform-by function: " instruction))))
-    (throw (Exception.
-                    (str "For tag " (:tag tag-spec) " in spec, no transform-by
-                          function found")))))
+                      (str "For tag " (tag-spec tag) " in spec, no transform-by
+                            function found"))))))
 
-(defn gen-codec [tag-name tag-spec]
-  (let [transformer (gen-transformations tag-spec)]
-    {:encoder {tag-name [(:tag tag-spec) (:outbound transformer)]}
-     :decoder {(:tag tag-spec) [tag-name (:inbound transformer)]}}))
+(defn gen-codec [tag-name tag-spec venue]
+  (let [transformer (gen-transformations tag-spec venue)
+        key-format (get-in @codecs [venue :key-format])
+        tag (key-format :tag)]
+    {:encoder {tag-name [(tag-spec tag) (:outbound transformer)]}
+     :decoder {(tag-spec tag) [tag-name (:inbound transformer)]}}))
 
-(defn load-spec [venue]
-  (if (nil? (venue @codecs))
-    (let [spec-file (str "specs/" (name venue) ".spec")]
-      (try
-        (if-let [spec (c/parse-string (slurp spec-file) true)]
-          (do
-            (swap! codecs assoc venue {:encoder {} :decoder {}
-                                       :tags-of-interest {}})
-            (doall (for [[k v] (:spec spec)]
-              (let [t (gen-codec k v)]
-                (swap! codecs update-in [venue :encoder] conj (:encoder t))
-                (swap! codecs update-in [venue :decoder] conj (:decoder t)))))
-            (swap! codecs assoc-in [venue :tags-of-interest]
-                                   (:tags-of-interest spec))
-            true))
-      (catch Exception e
-        (println "Error:" (.getMessage e))
-        (swap! codecs dissoc venue)
-        nil)))
-      true))
+(defn load-spec 
+  ([venue]
+    (load-spec venue true))
+  ([venue use-keyword-keys]
+    (if (nil? (venue @codecs))
+      (let [spec-file (str "specs/" (name venue) ".spec")
+            key-format (if use-keyword-keys #(keyword %) #(name %))]
+        (try
+          (if-let [spec (c/parse-string (slurp spec-file) use-keyword-keys)]
+            (do
+              (swap! codecs assoc venue {:encoder {} :decoder {}
+                                         :tags-of-interest {}
+                                         :key-format key-format})
+              (doall (for [[k v] (spec (key-format :spec))]
+                (let [t (gen-codec k v venue)]
+                  (swap! codecs update-in [venue :encoder] conj (:encoder t))
+                  (swap! codecs update-in [venue :decoder] conj (:decoder t)))))
+              (swap! codecs assoc-in [venue (key-format :tags-of-interest)]
+                                     (spec (key-format :tags-of-interest)))
+              true))
+        (catch Exception e
+          (println "Error:" (.getMessage e))
+          (swap! codecs dissoc venue)
+          nil)))
+        true)))
 
 (defn get-encoder [venue]
   (if-let [encoder (get-in @codecs [venue :encoder])]

@@ -11,7 +11,8 @@
         transform-by-value (gen-transformations {:tag "35"
                                                  :transform-by "by-value"
                                                  :values {:heartbeat "0" 
-                                                          :test-request "1"}})]
+                                                          :test-request "1"}}
+                                                :test-market)]
     (is (= "0" ((:outbound transform-by-value) :heartbeat)))
     (is (= :heartbeat ((:inbound transform-by-value) "0")))
 
@@ -19,7 +20,8 @@
     (is (= :test-request ((:inbound transform-by-value) "1")))
 
   (let [transform-to-int (gen-transformations {:tag "38"
-                                               :transform-by "to-int"})]
+                                               :transform-by "to-int"}
+                                              :test-market)]
     (is (= "100" ((:outbound transform-to-int) 100)))
     (is (= 100 ((:inbound transform-to-int) "100")))
     
@@ -29,7 +31,8 @@
     (is (thrown? Exception ((:inbound transform-to-int) "100.0"))))
 
   (let [transform-to-double (gen-transformations {:tag "44"
-                                                  :transform-by "to-double"})]
+                                                  :transform-by "to-double"}
+                                                 :test-market)]
     (is (= "1.0" ((:outbound transform-to-double) 1.0)))
     (is (= "1.0" ((:outbound transform-to-double) 1.00)))
     (is (= 1.0 ((:inbound transform-to-double) "1.00")))
@@ -41,7 +44,8 @@
     (is (= 1.0 ((:inbound transform-to-double) "1"))))
 
   (let [transform-to-string (gen-transformations {:tag "55"
-                                                  :transform-by "to-string"})]
+                                                  :transform-by "to-string"}
+                                                 :test-market)]
     (is (= "NESNz" ((:outbound transform-to-string) "NESNz")))
     (is (= "NESNz" ((:inbound transform-to-string) "NESNz"))))
 
@@ -63,7 +67,7 @@
                     :market-peg "P"
                     :primary-peg "R"
                     :mid-price-peg "M"}}
-        codec (gen-codec fix-tag-name tag-spec)]
+        codec (gen-codec fix-tag-name tag-spec :test-market)]
     (is (= (tag-number (get-in codec [:encoder :exec-inst])) "18"))
     (is (= ((translation-fn (get-in codec [:encoder fix-tag-name])) :market-peg)
            "P"))
