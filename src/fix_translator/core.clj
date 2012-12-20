@@ -138,6 +138,11 @@
   (throw (Exception. (str "No decoder found for tag " (first tag-value)
                           " in spec")))))
 
+(defn decode-tag [venue tag msg]
+  (let [tag-number (first (get-in @codecs [venue :encoder tag]))
+        tag-value (extract-tag-value tag-number msg)]
+    ((second (get-in @codecs [venue :decoder tag-number])) tag-value)))
+
 (defn decode-msg [venue msg-type msg]
   (let [decoder (get-decoder venue)
         tags (get-tags-of-interest venue msg-type) 
