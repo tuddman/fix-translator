@@ -145,7 +145,6 @@
         decoder (get-decoder :test-market)]
     (is (= (tag-name (decoder "35")) :msg-type))
     (is (= ((translation-fn (decoder "35")) "0") :heartbeat))
-
     (is (thrown? Exception (get-decoder :invalid-market)))))
 
 (deftest get-tags-of-interest-t
@@ -177,6 +176,14 @@
            {:msg-type :execution-report}))
     (is (thrown? Exception (translate-to-map decoder ["00" "8"])))
     (is (thrown? Exception (translate-to-map decoder ["35" "Z"])))))
+
+(deftest decode-tag-t
+  (let [_ (load-spec :test-market)
+        msg "35=8\u000144=1.0\u000155=NESNz\u000139=0\u0001"]
+    (is (= :execution-report (decode-tag :test-market :msg-type msg)))
+    (is (= 1.0 (decode-tag :test-market :price msg)))
+    (is (= "NESNz" (decode-tag :test-market :symbol msg)))
+    (is (= :new (decode-tag :test-market :order-status msg)))))
 
 (deftest decode-msg-t
   (let [_ (load-spec :test-market)]
