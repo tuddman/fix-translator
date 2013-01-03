@@ -12,19 +12,19 @@
 (def ^:const translation-fn second)
 
 (defn invert-map
-  ; Switches the role of keys and values in a map.
+  "Switches the role of keys and values in a map."
   [m]
   (let [new-keys (vals m)
         new-vals (keys m)]
     (zipmap new-keys new-vals)))
 
 (defn gen-transformations 
-  ; Takes a specification for a single FIX tag and returns a map containing
-  ; two transformation functions for that tag: one which transforms a
-  ; spec-neutral value into a valid FIX value (ex: transforms :hearbeat into "0"
-  ; for the msg-type tag) and another which transforms a valid FIX value into
-  ; a spec-neutral format (ex: transforms "2" into :filled for the order-status
-  ; tag).
+  "Takes a specification for a single FIX tag and returns a map containing
+   two transformation functions for that tag: one which transforms a
+   spec-neutral value into a valid FIX value (ex: transforms :hearbeat into
+   \"0\" for the msg-type tag) and another which transforms a valid FIX value
+   into a spec-neutral format (ex: transforms \"2\" into :filled for the
+   order-status tag)."
   [tag-spec venue]
   (let [key-format (get-in @codecs [venue :key-format])
         tag (key-format :tag)
@@ -52,10 +52,10 @@
                             function found"))))))
 
 (defn gen-codec 
-  ; Takes information about a tag and creates an encoding and decoding map for
-  ; it. The encoding map keys a spec-neutral tag name to its corresponding FIX
-  ; tag number and transformation function. The decoding map keys a FIX tag
-  ; number to is tag name and transformation function.
+  "Takes information about a tag and creates an encoding and decoding map for
+   it. The encoding map keys a spec-neutral tag name to its corresponding FIX
+   tag number and transformation function. The decoding map keys a FIX tag
+   number to is tag name and transformation function."
   [tag-name tag-spec venue]
   (let [transformer (gen-transformations tag-spec venue)
         key-format (get-in @codecs [venue :key-format])
@@ -64,9 +64,9 @@
      :decoder {(tag-spec tag) [tag-name (:inbound transformer)]}}))
 
 (defn load-spec
-  ; Takes a venue name, reads its FIX specification, and generates encoders and
-  ; decoders for each of its tags. The user may specify whether the encoding and
-  ; decoding maps use keyword keys or string keys.
+  "Takes a venue name, reads its FIX specification, and generates encoders and
+   decoders for each of its tags. The user may specify whether the encoding and
+   decoding maps use keyword keys or string keys."
   ([venue]
     (load-spec venue true))
   ([venue use-keyword-keys?]
@@ -93,7 +93,7 @@
         true)))
 
 (defn get-encoder 
-  ; Returns the encoder for a particular venue.
+  "Returns the encoder for a particular venue."
   [venue]
   (if-let [encoder (get-in @codecs [venue :encoder])]
     encoder
@@ -101,9 +101,9 @@
       it with load-spec?")))))
 
 (defn translate-to-fix 
-  ; Takes an encoder and a collection containing a spec-neutral tag and its
-  ; value, looks up the corresponding FIX values for the tag and value, and
-  ; returns them formatted as a FIX message fragment.
+  "Takes an encoder and a collection containing a spec-neutral tag and its
+   value, looks up the corresponding FIX values for the tag and value, and
+   returns them formatted as a FIX message fragment."
   [encoder tag-value]
   (if-let [translator (encoder (first tag-value))]
     (if-let [value ((translation-fn translator) (second tag-value))]
@@ -113,8 +113,8 @@
     (throw (Exception. (str "tag " (first tag-value) " not found")))))
 
 (defn add-msg-cap
-  ; Takes an encoder and a FIX msg, and prepends it with the FIX version and
-  ; the msg's length.
+  "Takes an encoder and a FIX msg, and prepends it with the FIX version and
+   the msg's length."
   [encoder msg]
   (let [msg-length (count msg)
         msg-cap (s/join "" (map (partial translate-to-fix encoder)
@@ -123,20 +123,20 @@
     (str msg-cap msg)))
 
 (defn checksum
-  ; Returns a 3-character string (left-padded with zeroes) representing the
-  ; checksum of msg calculated according to the FIX protocol.
+  "Returns a 3-character string (left-padded with zeroes) representing the
+   checksum of msg calculated according to the FIX protocol."
   [msg]
   (format "%03d" (mod (reduce + (.getBytes msg)) 256)))
 
 (defn add-checksum 
-  ; Takes an encoder and a FIX msg, and appends it with the checksum.
+  "Takes an encoder and a FIX msg, and appends it with the checksum."
   [encoder msg]
   (let [chksum (translate-to-fix encoder [:checksum (checksum msg)])]
     (str msg chksum)))
 
 (defn encode-msg 
-  ; Takes a venue and a collection of tags and their values in the form [t0 v0
-  ; t1 v1 t2 v2 ...] and transforms it into a FIX message.
+  "Takes a venue and a collection of tags and their values in the form [t0 v0
+   t1 v1 t2 v2 ...] and transforms it into a FIX message."
   [venue tags-values]
   (let [encoder (get-encoder venue)]
     (->> (partition 2 tags-values)
@@ -146,7 +146,7 @@
          (add-checksum encoder))))
 
 (defn get-decoder
-  ; Returns the decoder for a particular venue.
+  "Returns the decoder for a particular venue."
   [venue]
   (if-let [decoder (get-in @codecs [venue :decoder])]
     decoder
@@ -154,8 +154,8 @@
       it with load-spec?")))))
 
 (defn get-tags-of-interest
-  ; Takes the venue and FIX message type, and returns the set of tags to be
-  ; extracted from a FIX message and transformed into a spec-neutral format.
+  "Takes the venue and FIX message type, and returns the set of tags to be
+   extracted from a FIX message and transformed into a spec-neutral format."
   [venue msg-type]
   (if-let [tags (get-in @codecs [venue :tags-of-interest msg-type])]
     tags
@@ -163,13 +163,13 @@
                             msg-type)))))
 
 (defn extract-tag-value 
-  ; Extracts the value of a tag from a message.
+  "Extracts the value of a tag from a message."
   [tag msg]
   (let [pattern (re-pattern (str "(?<=" tag "=)(.*?)(?=" tag-delimiter ")"))]
     (peek (re-find pattern msg))))
 
 (defn get-msg-type
-  ; Returns the FIX message type in spec-neutral form.
+  "Returns the FIX message type in spec-neutral form."
   [venue msg]
   (let [decoder (get-decoder venue)
         msg-type (extract-tag-value msg-type-tag msg)]
@@ -178,8 +178,8 @@
       :unknown-msg-type)))
 
 (defn translate-to-map
-  ; Takes a decoder and a collection with a FIX message tag and its value, and
-  ; returns a map containing the tag name and value in spec-neutral form.
+  "Takes a decoder and a collection with a FIX message tag and its value, and
+   returns a map containing the tag name and value in spec-neutral form."
   [decoder tag-value]
   (if-let [translator (decoder (first tag-value))]
     (if-let [value ((translation-fn translator) (second tag-value))]
@@ -190,8 +190,8 @@
                           " in spec")))))
 
 (defn decode-tag
-  ; Takes a tag in spec-neutral form and a raw FIX message, extracts the tag's
-  ; value from the message, and returns the value in spec-neutral form.
+  "Takes a tag in spec-neutral form and a raw FIX message, extracts the tag's
+   value from the message, and returns the value in spec-neutral form."
   [venue tag msg]
   (if-let [tag-number (tag-number (get-in @codecs [venue :encoder tag]))]
     (if-let [decoded-tag-value ((translation-fn
@@ -202,8 +202,8 @@
     (throw (Exception. (str "No tag number found for " tag)))))
 
 (defn decode-msg
-  ; Takes a venue, message-type, and a raw FIX message, and returns a map
-  ; containing tags and their values in spec-neutral form.
+  "Takes a venue, message-type, and a raw FIX message, and returns a map
+   containing tags and their values in spec-neutral form."
   [venue msg-type msg]
   (let [decoder (get-decoder venue)
         tags (get-tags-of-interest venue msg-type) 
