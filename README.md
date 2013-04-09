@@ -5,12 +5,20 @@ fix-translator is a library to help you translate collections into [FIX](http://
 
 Basically, it helps you transform this:
 ```
-"8=FIX.4.2\u00019=219\u000135=8\u000152=20130402-11:57:23\u000149=VENUE_ID\u000156=MY_ID\u000134=3\u000157=MY_SUB_ID\u000121=1\u000155=NESNz\u000159=0\u000154=1\u000160=20130402-11:57:23\u000138=100\u000140=2\u000144=1.000\u000137=13\u000111=1177\u000117=001A13\u000120=0\u0001150=0\u000139=0\u0001151=100\u000114=0\u00016=0.0000\u000131=0.0000\u000132=0\u000110=220\u0001"
+"8=FIX.4.2\u00019=219\u000135=8\u000152=20130402-11:57:23\u000149=VENUE_ID\u0001
+56=MY_ID\u000134=3\u000157=MY_SUB_ID\u000121=1\u000155=NESNz\u000159=0\u0001
+54=1\u000160=20130402-11:57:23\u000138=100\u000140=2\u000144=1.000\u0001
+37=13\u000111=1177\u000117=001A13\u000120=0\u0001150=0\u000139=0\u0001
+151=100\u000114=0\u00016=0.0000\u000131=0.0000\u000132=0\u000110=220\u0001"
 ```
 
 into this:
 ```clojure
-{:symbol "NESNz", :cumulative-qty 0, :order-id "13", :target-comp-id "MY_ID", :order-qty 100, :avg-price 0.0, :client-order-id "1177", :order-type :limit, :sender-comp-id "VENUE_ID", :side :buy, :last-share 0, :order-status :new, :msg-type :execution-report, :transact-time "20130402-11:57:24", :leaves-qty 100, :last-price 0.0, :price 1.0}
+{:symbol "NESNz", :cumulative-qty 0, :order-id "13", :target-comp-id "MY_ID",
+:order-qty 100, :avg-price 0.0, :client-order-id "1177", :order-type :limit,
+:sender-comp-id "VENUE_ID", :side :buy, :last-share 0, :order-status :new,
+:msg-type :execution-report, :transact-time "20130402-11:57:24",
+:leaves-qty 100, :last-price 0.0, :price 1.0}
 ```
 
 and back again with any FIX specification.
@@ -142,11 +150,11 @@ Finally, after the spec is complete, include which tags you want translated from
 The label you give to each message type should correspond to the mapping you give in the spec.
 
 ## Using fix-translator
-__1__. [Install]() and [include]() fix-translator in your project.
+__1__. [Install](https://github.com/nitinpunjabi/fix-translator#installing-leiningen) and [include](https://github.com/nitinpunjabi/fix-translator#usage) fix-translator in your project.
 
 __2__. In your project's root directory, create a directory called specs. This is where you'll place your destination's .spec file.
 
-__3__. [Create a spec file]() for your destination.
+__3__. [Create a spec file](https://github.com/nitinpunjabi/fix-translator#creating-a-spec-file) for your destination.
 
 __4__. Load the spec for the destination
 ```Clojure
