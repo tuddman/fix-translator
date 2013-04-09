@@ -53,7 +53,7 @@ fix-translator was written to provide translation services for [clj-fix](https:/
 ```
 
 ## How fix-translator works
-Each destination you communicate with, such as a broker or exchange, has its own FIX specification. To translate FIX messages for a particular destination, fix-translator requires a .spec file for that destination. This file basically contains a JSON object describing two things:
+Each destination you communicate with, such as a broker or exchange, has its own FIX specification. To translate FIX messages for a particular destination, fix-translator requires a .spec file for that destination. This file basically contains a JSON object describing three things:
 
 1. The name of the spec.This should correspond to the file name itself.
 2. The spec description which is a mapping between the destination's FIX tags and values, and your preferred representations for those tags and values.
@@ -81,12 +81,12 @@ Here's what the structure looks like:
 {
   "<your-name-for-the-tag>" : {
     "tag" : <tag value from specification>,
-    "transform-by" : "to-int",
+    "transform-by" : "<transform function>",
    }
-}    
+}
 ```
 
-"transform-by" can take one of four values. The first three: "to-int", "to-double" "to-string", simply take the tag's value and transforms it into an int, double, or string respectively. The fourth possible value, "by-value", takes the tag's value and maps it to a keyword for that value.
+"transform-by" can take one of four values. The first three: "to-int", "to-double" "to-string", simply take the tag's value and transforms it into an int, double, or string respectively. The fourth possible value, "by-value", takes the tag's value and maps it to a keyword for that value. This mapping is stored in a map called _values_.
 
 An example will make things clearer. Scroll to page 15 of the [BATS specification](http://cdn.batstrading.com/resources/participant_resources/BATS_Europe_FIX_Specification.pdf). The first tag we see is 8 for _BeginString_. This can accept only one value: "FIX.4.2". So we extend our JSON object as follows:
 ```Json
