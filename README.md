@@ -1,3 +1,4 @@
+
 # fix-translator
 
 ## What is it?
@@ -53,9 +54,10 @@ fix-translator was written to provide translation services for [clj-fix](https:/
 
 ## How fix-translator works
 Each destination you communicate with, such as a broker or exchange, has its own FIX specification. To translate FIX messages for a particular destination, fix-translator requires a .spec file for that destination. This file basically contains a JSON object describing two things:
-1) The name of the spec.This should correspond to the file name itself.
-2) The spec description which is a mapping between the destination's FIX tags and values, and your preferred representations for those tags and values.
-3) The Tags of Interest when translating from FIX messages to your representation (ie. which tags in the message you want translated for each message type). For example, for logon message types, you may be interested only in the sender id, and so on.
+
+1. The name of the spec.This should correspond to the file name itself.
+2. The spec description which is a mapping between the destination's FIX tags and values, and your preferred representations for those tags and values.
+3. The Tags of Interest when translating from FIX messages to your representation (ie. which tags in the message you want translated for each message type). For example, for logon message types, you may be interested only in the sender id, and so on.
 
 Take a look at this [sample spec](https://github.com/nitinpunjabi/fix-translator/blob/master/specs/test-market.spec) file to get an idea of what they look like.
 
@@ -74,6 +76,7 @@ In the file, start the JSON with the spec's name:
 
 Then begin describing the spec. This basically entails going through your destination's FIX specification, and for each tag, specifying three things: the keyword you wish to assign to the tag, the transformation function, and if the tag can have a fixed set of values, a mapping between those values and the keywords you wish to refer to them with.
 
+```
 Here's what the structure looks like:
 {
   "<your-name-for-the-tag>" : {
@@ -81,6 +84,7 @@ Here's what the structure looks like:
     "transform-by" : "to-int",
    }
 }    
+```
 
 "transform-by" can take one of four values. The first three: "to-int", "to-double" "to-string", simply take the tag's value and transforms it into an int, double, or string respectively. The fourth possible value, "by-value", takes the tag's value and maps it to a keyword for that value.
 
@@ -150,11 +154,11 @@ Finally, after the spec is complete, include which tags you want translated from
 The label you give to each message type should correspond to the mapping you give in the spec.
 
 ## Using fix-translator
-__1__. [Install](https://github.com/nitinpunjabi/fix-translator#installing-leiningen) and [include](https://github.com/nitinpunjabi/fix-translator#usage) fix-translator in your project.
+__1__. [Install]() and [include]() fix-translator in your project.
 
 __2__. In your project's root directory, create a directory called specs. This is where you'll place your destination's .spec file.
 
-__3__. [Create a spec file](https://github.com/nitinpunjabi/fix-translator#creating-a-spec-file) for your destination.
+__3__. [Create a spec file]() for your destination.
 
 __4__. Load the spec for the destination
 ```Clojure
