@@ -30,18 +30,18 @@ In addition to performing two-way translation, when translating from collections
 fix-translator was written to provide translation services for [clj-fix](https://github.com/nitinpunjabi/clj-fix), but it can be used as a stand-alone library. It is released here under the MIT license.
 
 ## Related repos
-- [clj-fix](https://github.com/nitinpunjabi/clj-fix)
+- [clj-fix](https://github.com/tuddman/clj-fix)
 - [clj-fix-oms](https://github.com/nitinpunjabi/clj-fix-oms)
 
 ## Installing (Leiningen)
 ```Clojure
 
 ;Include this in your project.clj:
-[fix-translator "1.05"]
+[tuddman/fix-translator "1.06-SNAPSHOT"]
 
 ; Example:
 (defproject my-project "1.0"
-  :dependencies [[fix-translator "1.05"]])
+  :dependencies [[tuddman/fix-translator "1.06-SNAPSHOT"]])
 ```
 
 ## Usage
