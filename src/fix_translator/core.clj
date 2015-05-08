@@ -1,4 +1,5 @@
 (ns fix-translator.core
+  (:gen-class)
   (:require (cheshire [core :as c])
             (clojure [string :as s])
             (clj-time [core :as t] [format :as f])))
