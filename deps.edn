@@ -1,0 +1,6 @@
+{:paths ["src"]
+ :deps {org.clojure/clojure {:mvn/version "1.9.0"}
+        cheshire            {:mvn/version "5.8.0"}
+        clj-time            {:mvn/version "0.14.0"}}
+ :aliases {:dev {:extra-paths ["test"]
+                 :extra-deps {eftest {:mvn/version "0.5.2"}}}}}
